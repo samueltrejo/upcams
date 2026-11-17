@@ -1,0 +1,40 @@
+services:
+  media:
+    image: bluenviron/mediamtx:1.21.3
+    restart: unless-stopped
+    environment:
+      MTX_PATHS_CAMERA1_SOURCE: ${CAMERA_1_URL:?Set CAMERA_1_URL in .env}
+      MTX_PATHS_CAMERA1_SOURCEONDEMAND: "true"
+      MTX_PATHS_CAMERA1_RTSPTRANSPORT: tcp
+      MTX_PATHS_CAMERA2_SOURCE: ${CAMERA_2_URL:?Set CAMERA_2_URL in .env}
+      MTX_PATHS_CAMERA2_SOURCEONDEMAND: "true"
+      MTX_PATHS_CAMERA2_RTSPTRANSPORT: tcp
+      MTX_PATHS_CAMERA3_SOURCE: ${CAMERA_3_URL:?Set CAMERA_3_URL in .env}
+      MTX_PATHS_CAMERA3_SOURCEONDEMAND: "true"
+      MTX_PATHS_CAMERA3_RTSPTRANSPORT: tcp
+      MTX_PATHS_CAMERA4_SOURCE: ${CAMERA_4_URL:?Set CAMERA_4_URL in .env}
+      MTX_PATHS_CAMERA4_SOURCEONDEMAND: "true"
+      MTX_PATHS_CAMERA4_RTSPTRANSPORT: tcp
+    expose:
+      - "8888"
+
+  gateway:
+    image: caddy:2.10.2-alpine
+    restart: unless-stopped
+    depends_on:
+      - media
+    environment:
+      # This desktop's current LAN IP is the development default. Set
+      # CAMERA_APP_HOST in .env to the Ubuntu server's stable LAN IP later.
+      CAMERA_APP_HOST: ${CAMERA_APP_HOST:-192.168.0.203}
+    ports:
+      - "${CAMERA_HTTPS_PORT:-8443}:8443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./site:/srv:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

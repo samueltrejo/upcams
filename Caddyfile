@@ -1,0 +1,66 @@
+{
+	# The dashboard is intentionally HTTPS-only. There is no public ACME or
+	# Cloudflare dependency; certificates come from Caddy's private local CA.
+	auto_https disable_redirects
+	# Some clients omit SNI when connecting to an IP literal. Use the configured
+	# LAN address so Caddy can still select the correct local certificate.
+	default_sni {$CAMERA_APP_HOST}
+}
+
+https://{$CAMERA_APP_HOST}:8443, https://localhost:8443 {
+	tls internal
+	encode zstd gzip
+
+	header {
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		Permissions-Policy "camera=(), geolocation=(), microphone=()"
+	}
+
+	# Friendly public paths map to MediaMTX's internal HLS paths. The browser
+	# sees only this HTTPS origin; RTSP tokens and MediaMTX stay inside Docker.
+	redir /cam1 /cam1/ 308
+	handle /cam1/* {
+		uri replace /cam1 /camera1
+		reverse_proxy media:8888
+	}
+
+	redir /cam2 /cam2/ 308
+	handle /cam2/* {
+		uri replace /cam2 /camera2
+		reverse_proxy media:8888
+	}
+
+	redir /cam3 /cam3/ 308
+	handle /cam3/* {
+		uri replace /cam3 /camera3
+		reverse_proxy media:8888
+	}
+
+	redir /cam4 /cam4/ 308
+	handle /cam4/* {
+		uri replace /cam4 /camera4
+		reverse_proxy media:8888
+	}
+
+	# MediaMTX can redirect HLS playlist requests to its canonical path while
+	# performing its cookie check. Keep those canonical paths behind the same
+	# HTTPS gateway as well.
+	handle /camera1/* {
+		reverse_proxy media:8888
+	}
+	handle /camera2/* {
+		reverse_proxy media:8888
+	}
+	handle /camera3/* {
+		reverse_proxy media:8888
+	}
+	handle /camera4/* {
+		reverse_proxy media:8888
+	}
+
+	handle {
+		root * /srv
+		file_server
+	}
+}
